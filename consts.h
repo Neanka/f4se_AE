@@ -11,7 +11,8 @@ struct perkData
 	std::string		SWFPath;
 };
 
-const std::string compareops[6] = {"=","!=","&gt;","&gt;=","&lt;","&lt;="};
+//const std::string compareops[6] = {"=","!=","&gt;","&gt;=","&lt;","&lt;="};
+const std::string compareops[6] = {"=","≠","&gt;","≥","&lt;","≤"};
 
 struct AvailablePerk
 {

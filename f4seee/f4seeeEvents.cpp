@@ -368,6 +368,7 @@ void LevelIncrease__Event_Dispatcher_Init()
 {
 	LevelIncrease__Event_Dispatcher_address = RVA <BSTEventDispatcher<LevelIncrease::Event>*>(
 		"LevelIncrease__Event_Dispatcher_address", {
+			{ RUNTIME_VERSION_1_11_191, 0x00D92E30 },
 			{ RUNTIME_VERSION_1_10_163, 0x00EC3140 },
 			{ RUNTIME_VERSION_1_10_130, 0x00EC3020 },
 			{ RUNTIME_VERSION_1_10_120, 0x00EC3020 },

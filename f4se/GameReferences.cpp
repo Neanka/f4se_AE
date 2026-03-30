@@ -3,15 +3,15 @@
 #include "f4se/GameRTTI.h"
 
 // 
-RelocPtr <PlayerCharacter*> g_player(0x032BD1F0);
+RelocPtr <PlayerCharacter*> g_player(0x032D2260);
 
-RelocAddr <_HasDetectionLOS> HasDetectionLOS(0x010DB670);
+RelocAddr <_HasDetectionLOS> HasDetectionLOS(0x010E0120);
 
-RelocAddr <_GetLinkedRef_Native> GetLinkedRef_Native(0x00561760);
+RelocAddr <_GetLinkedRef_Native> GetLinkedRef_Native(0x00564580);
 
-RelocAddr <_SetLinkedRef_Native> SetLinkedRef_Native(0x00561780);
+RelocAddr <_SetLinkedRef_Native> SetLinkedRef_Native(0x005645A0);
 
-RelocAddr <_MoveRefrToPosition> MoveRefrToPosition(0x0117C080);
+RelocAddr <_MoveRefrToPosition> MoveRefrToPosition(0x01180B30);
 
 bool Actor::GetEquippedExtraData(UInt32 slotIndex, ExtraDataList ** extraData)
 {

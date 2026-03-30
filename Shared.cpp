@@ -120,7 +120,7 @@ std::string PBT_GetConfigOptionString(std::string file, const char* section, std
 {
     file = "./Data/PBT/" + file;
     std::string result;
-    char resultBuf[256];
+    char resultBuf[4096];
     resultBuf[0] = 0;
     UInt32 resultLen = GetPrivateProfileString(section, key.c_str(), NULL, resultBuf, sizeof(resultBuf), file.c_str());
     result = resultBuf;
@@ -251,6 +251,7 @@ void RVA_InitExeAddress()
 {
     ExecuteCommand = RVA<_ExecuteCommand>(
         "ExecuteCommand (Console::ExecuteCommand)", {
+            { RUNTIME_VERSION_1_11_191, 0x01035D20 },
             { RUNTIME_VERSION_1_10_984, 0x00FB0250 },
             {RUNTIME_VERSION_1_10_162, 0x0125B4A0},
             {RUNTIME_VERSION_1_10_130, 0x0125B380},
@@ -487,6 +488,7 @@ void RVA_InitAddresses()
 {
     HasPerk = RVA<_HasPerk>(
         "HasPerk (Actor::GetPerkRank)", {
+            { RUNTIME_VERSION_1_11_191, 0x00C91EA0 },
             { RUNTIME_VERSION_1_10_984, 0x00C0C3F0 },
             {RUNTIME_VERSION_1_10_162, 0x00DA6600},
             {RUNTIME_VERSION_1_10_130, 0x00DA64E0},
@@ -507,6 +509,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 0F B6 77 5A", 0, 1, 5); // ng
     AddPerk = RVA<_AddPerk>(
         "AddPerk", {
+            { RUNTIME_VERSION_1_11_191, 0x00C91AF0 },
             { RUNTIME_VERSION_1_10_984, 0x00C0C040 },
             {RUNTIME_VERSION_1_10_162, 0x00DA6200},
             {RUNTIME_VERSION_1_10_130, 0x00DA60E0},
@@ -527,6 +530,7 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 08 48 89 6C 24 10 56 57 41 56 48 83 EC 40 48 8D 99 34 04 00 00"); // ng
     GetLevel = RVA<_GetLevel>(
         "GetLevel (Actor::GetLevel)", {
+            { RUNTIME_VERSION_1_11_191, 0x00C62EC0 },
             { RUNTIME_VERSION_1_10_984, 0x00BDD410 },
             {RUNTIME_VERSION_1_10_162, 0x00D79E90},
             {RUNTIME_VERSION_1_10_130, 0x00D79D70},
@@ -547,6 +551,7 @@ void RVA_InitAddresses()
         }, "48 8B 89 E0 00 00 00 48 83 C1 68 E9 ? ? ? ?"); //ng
     g_main = RVA<uintptr_t>(
         "g_main (broken atm)", {
+            { RUNTIME_VERSION_1_11_191, 0x0},
             {RUNTIME_VERSION_1_10_162, 0x05AA4278},
             {RUNTIME_VERSION_1_10_130, 0x05AA4248},
             {RUNTIME_VERSION_1_10_120, 0x05ADD2C8},
@@ -566,6 +571,7 @@ void RVA_InitAddresses()
         }, "48 8B 05 ? ? ? ? 80 78 25 00 0F 85 ? ? ? ? 49 8B", 0, 3, 7);
     GetRandomPercent = RVA<_GetRandomPercent>(
         "GetRandomPercent BSRandom::UnsignedInt(BSRandom *this))", {
+            { RUNTIME_VERSION_1_11_191, 0x0165AE90 },
             { RUNTIME_VERSION_1_10_984, 0x01540CA0 },
             {RUNTIME_VERSION_1_10_162, 0x01B12C80},
             {RUNTIME_VERSION_1_10_130, 0x01B12B60},
@@ -583,6 +589,7 @@ void RVA_InitAddresses()
         }, "40 53 48 83 EC 30 8B D9 83 F9 01"); //ng
     GetRandomPercent2 = RVA<_GetRandomPercent2>(
         "GetRandomPercent2 (BSRandom::UnsignedInt(BSRandom *this, int a2))", {
+            { RUNTIME_VERSION_1_11_191, 0x0165AF60 },
             { RUNTIME_VERSION_1_10_984, 0x01540D70 },
             {RUNTIME_VERSION_1_10_162, 0x01B12D20},
             {RUNTIME_VERSION_1_10_130, 0x01B12C00},
@@ -600,6 +607,7 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 08 57 48 83 EC 30 8B DA 8B F9"); //ng
     SetPerkPoints_int = RVA<_SetPerkPoints_int>(
         "SetPerkPoints_int (PlayerCharacter::SetPerkCount)", {
+            { RUNTIME_VERSION_1_11_191, 0x00D75AC0 },
             { RUNTIME_VERSION_1_10_984, 0x00CEFFB0 },
             {RUNTIME_VERSION_1_10_162, 0x00EB8BA0},
             {RUNTIME_VERSION_1_10_130, 0x00EB8A80},
@@ -616,6 +624,7 @@ void RVA_InitAddresses()
         }, "40 57 48 83 EC 20 88 91 F1 0C 00 00"); //ng
     LevelupMenuProcessMessage = RVA<_LevelupMenuProcessMessage>(
         "LevelupMenuProcessMessage (LevelUpMenu::ProcessMessage)", {
+            { RUNTIME_VERSION_1_11_191, 0x00A76CD0 },
             { RUNTIME_VERSION_1_10_984, 0x00A23100 },
             {RUNTIME_VERSION_1_10_162, 0x00B384E0},
             {RUNTIME_VERSION_1_10_130, 0x00B383C0},
@@ -632,7 +641,8 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 ? 48 89 74 24 ? 57 48 83 EC 40 48 8B F1 48 8B FA"); //ng
     BSSoundHandle__Stop = RVA<_BSSoundHandle__Stop>(
         "_BSSoundHandle__Stop", {
-        { RUNTIME_VERSION_1_10_984, 0x015137E0 },
+            { RUNTIME_VERSION_1_11_191, 0x0162DA00 },
+            { RUNTIME_VERSION_1_10_984, 0x015137E0 },
             {RUNTIME_VERSION_1_10_162, 0x01AC8110},
             {RUNTIME_VERSION_1_10_130, 0x01AC7FF0},
             {RUNTIME_VERSION_1_10_120, 0x01AC7FF0},
@@ -648,6 +658,7 @@ void RVA_InitAddresses()
         }, "40 53 48 83 EC 20 8B 19 83 FB FF 74 ? C6 41 05 02"); //ng
     GetSoundByName = RVA<_GetSoundByName>(
         "_GetSoundByName (BGSAudio::GetSoundDescriptor)", {
+            { RUNTIME_VERSION_1_11_191, 0x00828760 },
             { RUNTIME_VERSION_1_10_984, 0x007D5020 },
             {RUNTIME_VERSION_1_10_162, 0x0082F700},
             {RUNTIME_VERSION_1_10_130, 0x0082F5E0},
@@ -658,6 +669,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 48 85 C0 74 ? C7 44 24 68 FF FF FF FF", 0, 1, 5); //ng
     BSAudioManager__GetSoundHandle = RVA<_BSAudioManager__GetSoundHandle>(
         "_BSAudioManager__GetSoundHandle", {
+            { RUNTIME_VERSION_1_11_191, 0x0162FEF0 },
             { RUNTIME_VERSION_1_10_984, 0x01515CD0 },
             {RUNTIME_VERSION_1_10_162, 0x01ACA5D0},
             {RUNTIME_VERSION_1_10_130, 0x01ACA4B0},
@@ -669,6 +681,7 @@ void RVA_InitAddresses()
         "E8 ? ? ? ? 83 FE 01 75 17", 0, 1, 5); //ng
     BSSoundHandle__Play = RVA<_BSSoundHandle__Play>(
         "_BSSoundHandle::Play", {
+            { RUNTIME_VERSION_1_11_191, 0x0162D930 },
             { RUNTIME_VERSION_1_10_984, 0x01513710 },
             {RUNTIME_VERSION_1_10_162, 0x01AC8040},
             {RUNTIME_VERSION_1_10_130, 0x01AC7F20},
@@ -679,6 +692,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 45 03 F7", 0, 1, 5); //ng
     g_BSAudioManager = RVA<void*>(
         "g_BSAudioManager", {
+            { RUNTIME_VERSION_1_11_191, 0x03345F10 },
             { RUNTIME_VERSION_1_10_984, 0x030A0C90 },
             {RUNTIME_VERSION_1_10_162, 0x05B0D208},
             {RUNTIME_VERSION_1_10_130, 0x05B0D188},

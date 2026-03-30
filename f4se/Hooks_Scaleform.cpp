@@ -28,19 +28,19 @@
 class BSScaleformManager;
 
 typedef BSScaleformManager * (* _BSScaleformManager_Ctor)(BSScaleformManager * mem);
-RelocAddr <_BSScaleformManager_Ctor> BSScaleformManager_Ctor(0x01B15210);
+RelocAddr <_BSScaleformManager_Ctor> BSScaleformManager_Ctor(0x01B1A3E0);
 _BSScaleformManager_Ctor BSScaleformManager_Ctor_Original = nullptr;
 
 typedef UInt32 (* _BSScaleformTint)(BSGFxShaderFXTarget * value, float * colors, float multiplier);
-RelocAddr <_BSScaleformTint> BSScaleformTint(0x01AFFAF0);
+RelocAddr <_BSScaleformTint> BSScaleformTint(0x01B04CC0);
 _BSScaleformTint BSScaleformTint_Original = nullptr;
 
-RelocAddr <uintptr_t> ScaleformInitHook_Start(0x01B15A20 + 0x226);
+RelocAddr <uintptr_t> ScaleformInitHook_Start(0x01B1ABF0 + 0x226);
 
-RelocAddr <uintptr_t> IMenuCreateHook_Start(0x01A7AF70 + 0xA0F);
+RelocAddr <uintptr_t> IMenuCreateHook_Start(0x01A80030 + 0xA0F);
 
 // 
-RelocAddr <uintptr_t> SetMenuName(0x016770C0);
+RelocAddr <uintptr_t> SetMenuName(0x0167BF60);
 
 //// plugin API
 struct ScaleformPluginInfo
