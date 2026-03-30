@@ -1,11 +1,10 @@
-
 #include "main.h"
 #include "PBTSerialization.h"
 
 #define CURRENT_INI_VERSION 2
 
-std::string mName = "PipboyTabs";
-UInt32 mVer = 1;
+const std::string mName = "PipboyTabs";
+const UInt32 mVer = 1;
 
 std::vector<ActorValueInfo*> Skills;
 struct avifStruct
@@ -27,16 +26,20 @@ std::vector<avifStruct> avifsPages;
 
 
 PluginHandle			    g_pluginHandle = kPluginHandle_Invalid;
-F4SEPapyrusInterface		*g_papyrus = NULL;
-F4SEScaleformInterface		*g_scaleform = NULL;
-F4SEMessagingInterface		*g_messaging = NULL;
-F4SESerializationInterface	*g_serialization = NULL;
+F4SEPapyrusInterface		*g_papyrus = nullptr;
+F4SEScaleformInterface		*g_scaleform = nullptr;
+F4SEMessagingInterface		*g_messaging = nullptr;
+F4SESerializationInterface	*g_serialization = nullptr;
 
 
 void UpdateMenu_int(GFxMovieRoot* root)
 {
+	if (!root) {
+		_DMESSAGE("UpdateMenu_int: root is nullptr");
+		return;
+	}
 	_DMESSAGE("ready callback");
-	if (Skills.size() > 0)
+	if (!Skills.empty())
 	{
 		GFxValue arrArgs[7];
 		root->CreateString(&arrArgs[0], "skills");
@@ -47,17 +50,18 @@ void UpdateMenu_int(GFxMovieRoot* root)
 		GFxValue skarray;
 		root->CreateArray(&skarray);
 		std::vector<std::string> strarr;
-		for (int j = 0; j < Skills.size(); j++)
+		for (const auto& baseSkill : Skills)
 		{
-			ActorValueInfo * baseSkill = Skills[j];
-			PopulateSkillEntry(&skarray, root, baseSkill, 1, strarr);
+			if (baseSkill) {
+				PopulateSkillEntry(&skarray, root, baseSkill, 1, strarr);
+			}
 		}
 		arrArgs[4].SetMember("skillsList", &skarray);
 		arrArgs[5].SetInt(0);
 		arrArgs[6].SetInt(0);
 		root->Invoke("root.PipboyTabs_loader.content.registerTab", nullptr, arrArgs, 7);
 	}
-	for (auto f : avifsPages)
+	for (const auto& f : avifsPages)
 	{
 		_MESSAGE("fill pages");
 		GFxValue arrArgs[7];
@@ -71,8 +75,9 @@ void UpdateMenu_int(GFxMovieRoot* root)
 		root->CreateArray(&skarray);
 		for (int j = 0; j < f.list.size(); j++)
 		{
-			TESForm * baseSkill = f.list[j];
-
+			TESForm* baseSkill = f.list[j];
+			if (!baseSkill) continue;
+			
 			int filterVal = 1;
 			if (f.filters.size() > j)
 			{
@@ -81,31 +86,25 @@ void UpdateMenu_int(GFxMovieRoot* root)
 				if (form->formType == kFormType_GLOB)
 				{
 					TESGlobal* glob = DYNAMIC_CAST(form, TESForm, TESGlobal);
-					filterVal = (int)glob->value;
+					if (glob) {
+						filterVal = static_cast<int>(glob->value);
+					}
 				}
-				else if(form->formType == kFormType_AVIF)
+				else if (form->formType == kFormType_AVIF)
 				{
 					ActorValueInfo* avif = DYNAMIC_CAST(form, TESForm, ActorValueInfo);
-					filterVal = (int)GetBaseAV(avif, (*g_player));
+					if (avif) {
+						filterVal = static_cast<int>(GetBaseAV(avif, *g_player));
+					}
 				}
 			}
-			float maxVal = 0.0;
-			if (f.maxValues.size() > j)
+			float maxVal = 0.0f;
+			if (!f.maxValues.empty())
 			{
-				maxVal = f.maxValues[j];
-			}
-			else
-			{
-				maxVal = f.maxValues[0];
-			}
-			if (f.list2.size() > j)
-			{
-				Populate_entry(&skarray, root, baseSkill, f.list2[j], filterVal, f.stringList, maxVal);
-			}
-			else
-			{
-				Populate_entry(&skarray, root, baseSkill, nullptr, filterVal, f.stringList, maxVal);
-			}
+				maxVal = (j < f.maxValues.size()) ? f.maxValues[j] : f.maxValues[0];
+			}			
+			TESForm* secondForm = (j < f.list2.size()) ? f.list2[j] : nullptr;
+			Populate_entry(&skarray, root, baseSkill, secondForm, filterVal, f.stringList, maxVal);
 			/*
 			switch (baseSkill->formType)
 			{
@@ -153,11 +152,11 @@ void UpdateMenu_int(GFxMovieRoot* root)
 
 		GFxValue charArray;
 		root->CreateArray(&charArray);
-		for (int j = 0; j < f.stringList.size(); j++)
+		for (const auto& str : f.stringList)
 		{
 			GFxValue strValue;
-			//_MESSAGE("%s", f.stringList[j].c_str());
-			root->CreateString(&strValue, f.stringList[j].c_str());
+			//_MESSAGE("%s", str.c_str());
+			root->CreateString(&strValue, str.c_str());
 			charArray.PushBack(&strValue);
 		}
 		arrArgs[4].SetMember("StringArray", &charArray);
@@ -168,8 +167,10 @@ void UpdateMenu_int(GFxMovieRoot* root)
 }
 
 
-void Populate_entry(GFxValue * dst, GFxMovieRoot * root, TESForm* form1, TESForm* form2, int filter, std::vector<std::string> stringValue, float maxVal)
+void Populate_entry(GFxValue* dst, GFxMovieRoot* root, TESForm* form1, TESForm* form2, int filter, const std::vector<std::string>& stringValue, float maxVal)
 {
+	if (!form1 || !dst || !root) return;
+	
 	GFxValue arrArg;
 	root->CreateObject(&arrArg);
 	float value = 0;
@@ -187,14 +188,15 @@ void Populate_entry(GFxValue * dst, GFxMovieRoot * root, TESForm* form1, TESForm
 	default:
 		break;
 	}
-	std::string name = "";
+	
+	std::string name;
 	TESFullName* fullname = DYNAMIC_CAST(form1, TESForm, TESFullName);
 	if (fullname)
 	{
 		name = fullname->name;
 	}
-	std::string desc = "";
-	TESDescription * pDescription = DYNAMIC_CAST(form1, TESForm, TESDescription);
+	std::string desc;
+	TESDescription* pDescription = DYNAMIC_CAST(form1, TESForm, TESDescription);
 	if (pDescription) {
 		BSString str;
 		CALL_MEMBER_FN(pDescription, Get)(&str, nullptr);
@@ -206,7 +208,7 @@ void Populate_entry(GFxValue * dst, GFxMovieRoot * root, TESForm* form1, TESForm
 		if (fullname)
 		{
 			std::string tempname = fullname->name;
-			if (tempname.length() > 0)
+			if (!tempname.empty())
 			{
 				name = tempname;
 			}
@@ -217,7 +219,7 @@ void Populate_entry(GFxValue * dst, GFxMovieRoot * root, TESForm* form1, TESForm
 			CALL_MEMBER_FN(pDescription, Get)(&str, nullptr);
 			desc = str.Get();
 			std::string tempdesc = str.Get();
-			if (tempdesc.length() > 0)
+			if (!tempdesc.empty())
 			{
 				desc = tempdesc;
 			}
@@ -225,32 +227,35 @@ void Populate_entry(GFxValue * dst, GFxMovieRoot * root, TESForm* form1, TESForm
 	}
 
 	RegisterBool(&arrArg, "readed", PBTSerialization::CheckRN(form1->formID));
-	if (name.length() > 0)
+	if (!name.empty())
 	{
 		RegisterString(&arrArg, root, "text", name.c_str());
 	}
 	else
 	{
-		RegisterString(&arrArg, root, "text", form1->GetEditorID());
+		const char* editorID = form1->GetEditorID();
+		RegisterString(&arrArg, root, "text", editorID ? editorID : "");
 	}
-	RegisterString(&arrArg, root, "qname", form1->GetEditorID());
+	
+	const char* qname = form1->GetEditorID();
+	RegisterString(&arrArg, root, "qname", qname ? qname : "");
 	RegisterString(&arrArg, root, "description", desc.c_str());
-	if (stringValue.size() > (int)value)
+	
+	if (static_cast<size_t>(value) < stringValue.size())
 	{
-		RegisterString(&arrArg, root, "stringValue", stringValue[(int)value].c_str());
+		RegisterString(&arrArg, root, "stringValue", stringValue[static_cast<size_t>(value)].c_str());
 	}
 	else
 	{
 		RegisterString(&arrArg, root, "stringValue", "");
 	}
+	
 	RegisterInt(&arrArg, "formid", form1->formID);
-
 	RegisterNumber(&arrArg, "value", buffedValue);
 	RegisterNumber(&arrArg, "maxVal", maxVal);
 	RegisterNumber(&arrArg, "basevalue", value);
 	RegisterNumber(&arrArg, "modifier", buffedValue - value);
 	RegisterNumber(&arrArg, "buffedvalue", buffedValue);
-
 	RegisterInt(&arrArg, "filterFlag", filter);
 
 	dst->PushBack(&arrArg);
@@ -406,23 +411,29 @@ void Populate_BOOK_FORM_Pair(GFxValue * dst, GFxMovieRoot * root, TESObjectBOOK*
 	//_DMESSAGE("EdID: %s, FormID: %i, value: %i, description %s", baseSkill->avName, baseSkill->formID, (int)value, GetDescription(baseSkill).c_str());
 }
 */
-void PopulateSkillEntry(GFxValue * dst, GFxMovieRoot * root, ActorValueInfo * baseSkill, int filter, std::vector<std::string> stringValue)
+void PopulateSkillEntry(GFxValue* dst, GFxMovieRoot* root, ActorValueInfo* baseSkill, int filter, const std::vector<std::string>& stringValue)
 {
+	if (!baseSkill || !dst || !root || !g_player) return;
+	
 	GFxValue arrArg;
 	root->CreateObject(&arrArg);
-	float value = GetBaseAV(baseSkill, (*g_player));
-	float buffedValue = GetFullAV(baseSkill, (*g_player));
+	float value = GetBaseAV(baseSkill, *g_player);
+	float buffedValue = GetFullAV(baseSkill, *g_player);
+	
 	RegisterString(&arrArg, root, "text", baseSkill->fullName.name);
-	RegisterString(&arrArg, root, "qname", baseSkill->GetEditorID());
+	const char* editorID = baseSkill->GetEditorID();
+	RegisterString(&arrArg, root, "qname", editorID ? editorID : "");
 	RegisterString(&arrArg, root, "description", GetDescription(baseSkill).c_str());
-	if (stringValue.size() > (int)value)
+	
+	if (static_cast<size_t>(value) < stringValue.size())
 	{
-		RegisterString(&arrArg, root, "stringValue", stringValue[(int)value].c_str());
+		RegisterString(&arrArg, root, "stringValue", stringValue[static_cast<size_t>(value)].c_str());
 	}
 	else
 	{
 		RegisterString(&arrArg, root, "stringValue", "");
 	}
+	
 	PRKFIsTaggedMessage message;
 	message.formid = baseSkill->formID;
 	g_messaging->Dispatch(g_pluginHandle, PRKFIsTaggedMessage::kMessage_PRKFIsTagged, (void*)&message, sizeof(PRKFIsTaggedMessage*), "PRKF");
@@ -430,14 +441,16 @@ void PopulateSkillEntry(GFxValue * dst, GFxMovieRoot * root, ActorValueInfo * ba
 	{
 		filter |= 2;
 	}
+	
 	RegisterBool(&arrArg, "readed", PBTSerialization::CheckRN(baseSkill->formID));
 	RegisterInt(&arrArg, "formid", baseSkill->formID);
 	RegisterNumber(&arrArg, "value", buffedValue);
-	RegisterNumber(&arrArg, "maxVal", 0.0);
+	RegisterNumber(&arrArg, "maxVal", 0.0f);
 	RegisterNumber(&arrArg, "basevalue", value);
 	RegisterNumber(&arrArg, "modifier", buffedValue - value);
 	RegisterNumber(&arrArg, "buffedvalue", buffedValue);
 	RegisterInt(&arrArg, "filterFlag", filter);
+	
 	dst->PushBack(&arrArg);
 	//_DMESSAGE("EdID: %s, FormID: %i, value: %i, description %s", baseSkill->avName, baseSkill->formID, (int)value, GetDescription(baseSkill).c_str());
 }
@@ -445,7 +458,7 @@ void PopulateSkillEntry(GFxValue * dst, GFxMovieRoot * root, ActorValueInfo * ba
 #include "f4se/ScaleformLoader.h"
 #include "PBTTranslator.h"
 
-void ReadINIs(std::vector<WIN32_FIND_DATA>* arr, char* modSettingsDirectory)
+void ReadINIs(std::vector<WIN32_FIND_DATA>* arr, const char* modSettingsDirectory)
 {
 	HANDLE hFind;
 	WIN32_FIND_DATA data;
@@ -459,6 +472,8 @@ void ReadINIs(std::vector<WIN32_FIND_DATA>* arr, char* modSettingsDirectory)
 }
 
 void OnF4SEMessage(F4SEMessagingInterface::Message* msg) {
+	if (!msg) return;
+	
 	switch (msg->type) {
 	case F4SEMessagingInterface::kMessage_GameDataReady:
 		CheckArchiveInvalidation(mName);
@@ -470,7 +485,7 @@ void OnF4SEMessage(F4SEMessagingInterface::Message* msg) {
 	case F4SEMessagingInterface::kMessage_GameLoaded:
 
 		// Inject translations
-		BSScaleformTranslator * translator = (BSScaleformTranslator*)(*g_scaleformManager)->stateBag->GetStateAddRef(GFxState::kInterface_Translator);
+		BSScaleformTranslator* translator = static_cast<BSScaleformTranslator*>((*g_scaleformManager)->stateBag->GetStateAddRef(GFxState::kInterface_Translator));
 		if (translator) {
 			PBTTranslator::LoadTranslations(translator);
 		}
@@ -482,12 +497,14 @@ void fillSkills()
 {
 	std::vector<WIN32_FIND_DATA> modSettingFiles;
 	ReadINIs(&modSettingFiles, "Data\\PRKF\\*.ini");
-	for (int i = 0; i < modSettingFiles.size(); i++) {
+	
+	for (size_t i = 0; i < modSettingFiles.size(); i++) {
 		_MESSAGE("ini: %s", modSettingFiles[i].cFileName);
 
 		std::string SkillsList = _GetConfigOptionString(modSettingFiles[i].cFileName, "Main", "SkillsList");
 		_MESSAGE("SkillsList %s", SkillsList.c_str());
-		if (SkillsList.size() > 0)
+		
+		if (!SkillsList.empty())
 		{
 			auto _SkillsList = DYNAMIC_CAST(GetFormFromIdentifier(SkillsList), TESForm, BGSListForm);
 			if (_SkillsList == nullptr) {
@@ -495,9 +512,9 @@ void fillSkills()
 				continue;
 			}
 			_DMESSAGE("form count %i", _SkillsList->forms.count);
-			for (int j = 0; j < _SkillsList->forms.count; j++)
+			for (UInt32 j = 0; j < _SkillsList->forms.count; j++)
 			{
-				ActorValueInfo * baseSkill = DYNAMIC_CAST(_SkillsList->forms.entries[j], TESForm, ActorValueInfo);
+				ActorValueInfo* baseSkill = DYNAMIC_CAST(_SkillsList->forms.entries[j], TESForm, ActorValueInfo);
 				if (baseSkill == nullptr) {
 					_DMESSAGE("entry is not a avif");
 					continue;
@@ -506,13 +523,9 @@ void fillSkills()
 				Skills.push_back(baseSkill);
 			}
 		}
-		else
-		{
-			_DMESSAGE("SkillsList is empty");
-			continue;
-		}
+		else _DMESSAGE("SkillsList is empty");
 	}
-	_MESSAGE("total skills count: %i", Skills.size());
+	_MESSAGE("total skills count: %zu", Skills.size());
 }
 
 
@@ -860,105 +873,7 @@ void PRKFMessageHandler(F4SEMessagingInterface::Message* msg) {
 	break;
 	}
 }
-/*
-extern "C"
-{
 
-	bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
-	{
-		gLog.OpenRelative(CSIDL_MYDOCUMENTS, (const char*)("\\My Games\\Fallout4\\F4SE\\" + mName + ".log").c_str());
-
-		logMessage("query");
-
-		// populate info structure
-		info->infoVersion = PluginInfo::kInfoVersion;
-		info->name = mName.c_str();
-		info->version = mVer;
-
-		// store plugin handle so we can identify ourselves later
-		g_pluginHandle = f4se->GetPluginHandle();
-
-		// Check game version
-		if (f4se->runtimeVersion != CURRENT_RUNTIME_VERSION) {
-			char str[512];
-			sprintf_s(str, sizeof(str), "Your game version: v%d.%d.%d.%d\nExpected version: v%d.%d.%d.%d\n%s will be disabled.",
-				GET_EXE_VERSION_MAJOR(f4se->runtimeVersion),
-				GET_EXE_VERSION_MINOR(f4se->runtimeVersion),
-				GET_EXE_VERSION_BUILD(f4se->runtimeVersion),
-				GET_EXE_VERSION_SUB(f4se->runtimeVersion),
-				GET_EXE_VERSION_MAJOR(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_MINOR(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_BUILD(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_SUB(CURRENT_RUNTIME_VERSION),
-				mName.c_str()
-			);
-
-			MessageBox(NULL, str, mName.c_str(), MB_OK | MB_ICONEXCLAMATION);
-			return false;
-		}
-
-		// get the papyrus interface and query its version
-		g_papyrus = (F4SEPapyrusInterface *)f4se->QueryInterface(kInterface_Papyrus);
-		if (!g_papyrus)
-		{
-			_MESSAGE("couldn't get papyrus interface");
-			return false;
-		}
-		else {
-			_MESSAGE("got papyrus interface");
-		}
-		g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
-		if (!g_scaleform)
-		{
-			_MESSAGE("couldn't get scaleform interface");
-			return false;
-		}
-		// Get the messaging interface
-		g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
-		if (!g_messaging) {
-			_MESSAGE("couldn't get messaging interface");
-			return false;
-		}
-		// Get the serialization interface
-		g_serialization = (F4SESerializationInterface *)f4se->QueryInterface(kInterface_Serialization);
-		if (!g_serialization) {
-			_MESSAGE("couldn't get serialization interface");
-			return false;
-		}
-		return true;
-	}
-
-	bool F4SEPlugin_Load(const F4SEInterface *f4se)
-	{
-		logMessage("load");
-
-		if (CheckModDropClientService() == 0)
-		{
-			_WARNING("WARNING: ModDropClient found.");
-			MessageBox(NULL, (LPCSTR)("ModDropClient found. \n" + mName + " will be disabled.").c_str(), (LPCSTR)mName.c_str(), MB_OK | MB_ICONEXCLAMATION);
-			return false;
-		}
-		g_serialization->SetUniqueID(g_pluginHandle, 'PBT');
-		g_serialization->SetRevertCallback(g_pluginHandle, PBTSerialization::RevertCallback);
-		g_serialization->SetLoadCallback(g_pluginHandle, PBTSerialization::LoadCallback);
-		g_serialization->SetSaveCallback(g_pluginHandle, PBTSerialization::SaveCallback);
-		if (g_scaleform)
-		{
-			g_scaleform->Register("PipboyTabs", RegisterScaleform);
-			_MESSAGE("Scaleform Register Succeeded");
-		}
-		g_messaging->RegisterListener(g_pluginHandle, "F4SE", OnF4SEMessage);
-		g_messaging->RegisterListener(g_pluginHandle, nullptr, PRKFMessageHandler);
-		if (g_papyrus)
-		{
-			g_papyrus->Register(RegisterFuncs);
-			_MESSAGE("Papyrus Register Succeeded");
-		}
-		return true;
-	}
-
-};
-*/
 extern "C" {
 	__declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
 	{
@@ -970,7 +885,7 @@ extern "C" {
 
 		0,	// not version independent
 		0,	// not version independent (extended field)
-		{ RUNTIME_VERSION_1_10_984, 0 },	// compatible with 1.10.984
+		{ CURRENT_RELEASE_RUNTIME, 0 },	// compatible with 1.10.984
 
 		0,	// works with any version of the script extender. you probably do not need to put anything here
 	};

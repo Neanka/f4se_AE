@@ -9,6 +9,14 @@
 #include "PRKFSerialization.h"
 #include "PRKFTranslator.h"
 
+#include "xbyak/xbyak.h"
+#include "f4se_common/BranchTrampoline.h"
+
+constexpr const char* INI_PATH = "./Data/MCM/Settings/PRKF.ini";
+constexpr const char* MOD_SETTINGS_PATTERN = "Data\\PRKF\\*.ini";
+constexpr const char* LEVEL_UP_MENU_NAME = "LevelUpMenu";
+constexpr const char* VIGNETTE_MENU_NAME = "VignetteMenu";
+
 std::string mName = "PRKF";
 UInt32 mVer = 1;
 
@@ -71,9 +79,9 @@ namespace PRKF_ModSettings
 
 	void ReadModSettings()
 	{
-		bPlayPerkSound = GetPrivateProfileInt("Main", "bPlayPerkSound", 1, "./Data/MCM/Settings/PRKF.ini") != 0;
-		bPlayPerkSoundLoop = GetPrivateProfileInt("Main", "bPlayPerkSoundLoop", 1, "./Data/MCM/Settings/PRKF.ini") != 0;
-		bIneligible = GetPrivateProfileInt("Filters", "bIneligible", 1, "./Data/MCM/Settings/PRKF.ini") != 0;
+		bPlayPerkSound = GetPrivateProfileInt("Main", "bPlayPerkSound", 1, INI_PATH) != 0;
+		bPlayPerkSoundLoop = GetPrivateProfileInt("Main", "bPlayPerkSoundLoop", 1, INI_PATH) != 0;
+		bIneligible = GetPrivateProfileInt("Filters", "bIneligible", 1, INI_PATH) != 0;
 	}
 
 }
@@ -607,7 +615,9 @@ bool processLists(GFxMovieRoot * root) {
 
 void GetBasicData() {
 	_DMESSAGE("GetBasicData");
-	PlayerCharacter* pPlayerCharacter = (*g_player);
+	PlayerCharacter* pPlayerCharacter = *g_player;
+	if (!pPlayerCharacter)
+		return;
 	if (GetPRKFStartedAV() == 0)
 	{
 		//SInt32 ppts = GetPerkPoints();
@@ -637,11 +647,12 @@ void GetBasicData() {
 
 void ReadINIs(std::vector<WIN32_FIND_DATA>* arr)
 {
-	char* modSettingsDirectory = "Data\\PRKF\\*.ini";
-
+	if (!arr)
+		return;
+	
 	HANDLE hFind;
 	WIN32_FIND_DATA data;
-	hFind = FindFirstFile(modSettingsDirectory, &data);
+	hFind = FindFirstFile(MOD_SETTINGS_PATTERN, &data);
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
 			arr->push_back(data);
@@ -767,7 +778,7 @@ public:
 
 	virtual void	Invoke(Args * args) {
 		if (args->args[0].GetType() != GFxValue::kType_Int) return;
-		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString("LevelUpMenu")), IMenu, LevelUpMenu);
+		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString(LEVEL_UP_MENU_NAME)), IMenu, LevelUpMenu);
 		if (!menu) return;
 		LevelupMenuPlayPerkSound_int(menu, args->args[0].GetInt());
 	}
@@ -780,7 +791,7 @@ public:
 
 	virtual void	Invoke(Args * args) {
 		if (args->args[0].GetType() != GFxValue::kType_String) return;
-		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString("LevelUpMenu")), IMenu, LevelUpMenu);
+		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString(LEVEL_UP_MENU_NAME)), IMenu, LevelUpMenu);
 		if (!menu) return;
 		BSSoundHandle__Stop(&menu->playingSound);
 		TESForm* ff = GetSoundByName(args->args[0].GetString());
@@ -799,7 +810,7 @@ public:
 
 
 	virtual void	Invoke(Args * args) {
-		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString("LevelUpMenu")), IMenu, LevelUpMenu);
+		LevelUpMenu* menu = DYNAMIC_CAST((*g_ui)->GetMenu(BSFixedString(LEVEL_UP_MENU_NAME)), IMenu, LevelUpMenu);
 		if (!menu) return;
 		BSSoundHandle__Stop(&menu->playingSound);
 	}
@@ -1158,10 +1169,7 @@ bool UpdateMenu_int()
 		_DMESSAGE("menu closed");
 		return false;
 	}
-	else
-	{
-		_DMESSAGE("menu opened");
-	}
+	_DMESSAGE("menu opened");
 
 	auto movie = menu->movie;
 	if (!movie)
@@ -1246,11 +1254,9 @@ bool PRKF_Papyrus::UpdateMenu(StaticFunctionTag*)
 
 void PRKF_Papyrus::OpenMenu(StaticFunctionTag*)
 {
-	//MenuOpenClose_int("VignetteMenu", true);
-	//MenuOpenClose_int("LevelUpMenu", true);
-	static BSFixedString menuName("VignetteMenu");
+	static BSFixedString menuName(VIGNETTE_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName, kMessage_Open);
-	static BSFixedString menuName2("LevelUpMenu");
+	static BSFixedString menuName2(LEVEL_UP_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName2, kMessage_Open);
 }
 
@@ -1262,11 +1268,10 @@ void PRKF_Papyrus::OpenTraitsMenu(StaticFunctionTag*, BGSListForm* list, UInt32 
 	traitsList = list;
 	traitsPoints = TP;
 	traitsAllowClose = allowClose;
-	//MenuOpenClose_int("VignetteMenu", true);
-	//MenuOpenClose_int("LevelUpMenu", true);
-	static BSFixedString menuName("VignetteMenu");
+
+	static BSFixedString menuName(VIGNETTE_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName, kMessage_Open);
-	static BSFixedString menuName2("LevelUpMenu");
+	static BSFixedString menuName2(LEVEL_UP_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName2, kMessage_Open);
 }
 
@@ -1276,11 +1281,10 @@ void PRKF_Papyrus::OpenTagSkillsMenu(StaticFunctionTag*, UInt32 numSkills, UInt3
 	tagSkillsNum = numSkills;
 	tagSkillsAmount = numPoints;
 	tagSkillsAllowRetag = allowRetag;
-	//MenuOpenClose_int("VignetteMenu", true);
-	//MenuOpenClose_int("LevelUpMenu", true);
-	static BSFixedString menuName("VignetteMenu");
+
+	static BSFixedString menuName(VIGNETTE_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName, kMessage_Open);
-	static BSFixedString menuName2("LevelUpMenu");
+	static BSFixedString menuName2(LEVEL_UP_MENU_NAME);
 	CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName2, kMessage_Open);
 }
 
@@ -1524,9 +1528,6 @@ void PRKFMessageHandler(F4SEMessagingInterface::Message* msg) {
 	}
 }
 
-#include "xbyak/xbyak.h"
-#include "f4se_common/BranchTrampoline.h"
-
 _SetPerkPoints_int SetPerkPoints_int_Original;
 
 void SetPerkPoints_int_Hook(PlayerCharacter * param1, SInt8 param2) {
@@ -1540,6 +1541,21 @@ _LevelupMenuProcessMessage LevelupMenuProcessMessage_Original;
 UInt32 LevelupMenuProcessMessage_Hook(LevelUpMenu * menu, UIMessage * message) {
 	if (message->type == 1)
 	{
+		auto movie = menu->movie;
+		if (!movie)
+			return false;
+		auto root = movie->movieRoot;
+		if (!root)
+			return false;
+		GFxValue loadedVar;
+		root->GetVariable(&loadedVar, "root.Menu_mc.loaded");
+		if (loadedVar.GetType() != GFxValue::kType_Int && loadedVar.GetType() != GFxValue::kType_UInt)
+		{
+			papMessageBox("<font size=\'40\'>PRKF error</font><br>Modified LevelUpMenu.swf not found. Please verify that the mod is installed correctly.");
+			static BSFixedString menuName("LevelUpMenu");
+			CALL_MEMBER_FN((*g_uiMessageManager), SendUIMessage)(menuName, kMessage_Close);
+			return false;
+		}
 		RegisterForInput(true);
 		UpdateMenu_int();
 	}
@@ -1550,173 +1566,7 @@ UInt32 LevelupMenuProcessMessage_Hook(LevelUpMenu * menu, UIMessage * message) {
 	}
 	return LevelupMenuProcessMessage_Original(menu, message);
 }
-/*
-extern "C"
-{
 
-	bool F4SEPlugin_Query(const F4SEInterface * f4se, PluginInfo * info)
-	{
-		gLog.OpenRelative(CSIDL_MYDOCUMENTS, (const char*)("\\My Games\\Fallout4\\F4SE\\" + mName + ".log").c_str());
-
-		logMessage("query");
-
-		// populate info structure
-		info->infoVersion = PluginInfo::kInfoVersion;
-		info->name = mName.c_str();
-		info->version = mVer;
-
-		// store plugin handle so we can identify ourselves later
-		g_pluginHandle = f4se->GetPluginHandle();
-
-		// Check game version
-		if (f4se->runtimeVersion != CURRENT_RUNTIME_VERSION) {
-			char str[512];
-			sprintf_s(str, sizeof(str), "Your game version: v%d.%d.%d.%d\nExpected version: v%d.%d.%d.%d\n%s will be disabled.",
-				GET_EXE_VERSION_MAJOR(f4se->runtimeVersion),
-				GET_EXE_VERSION_MINOR(f4se->runtimeVersion),
-				GET_EXE_VERSION_BUILD(f4se->runtimeVersion),
-				GET_EXE_VERSION_SUB(f4se->runtimeVersion),
-				GET_EXE_VERSION_MAJOR(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_MINOR(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_BUILD(CURRENT_RUNTIME_VERSION),
-				GET_EXE_VERSION_SUB(CURRENT_RUNTIME_VERSION),
-				mName.c_str()
-			);
-
-			MessageBox(NULL, str, mName.c_str(), MB_OK | MB_ICONEXCLAMATION);
-			return false;
-		}
-
-		// get the papyrus interface and query its version
-		g_papyrus = (F4SEPapyrusInterface *)f4se->QueryInterface(kInterface_Papyrus);
-		if (!g_papyrus)
-		{
-			_MESSAGE("couldn't get papyrus interface");
-			return false;
-		}
-		else {
-			_MESSAGE("got papyrus interface");
-		}
-		g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
-		if (!g_scaleform)
-		{
-			_MESSAGE("couldn't get scaleform interface");
-			return false;
-		}
-		else {
-			_MESSAGE("got scaleform interface");
-		}
-		// Get the messaging interface
-		g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
-		if (!g_messaging) {
-			_MESSAGE("couldn't get messaging interface");
-			return false;
-		}
-		// Get the serialization interface
-		g_serialization = (F4SESerializationInterface *)f4se->QueryInterface(kInterface_Serialization);
-		if (!g_serialization) {
-			_MESSAGE("couldn't get serialization interface");
-			return false;
-		}
-
-		return true;
-	}
-
-	bool F4SEPlugin_Load(const F4SEInterface *f4se)
-	{
-		logMessage("load");
-		if (CheckModDropClientService() == 0)
-		{
-			_WARNING("WARNING: ModDropClient found.");
-			MessageBox(NULL, (LPCSTR)("ModDropClient found. \n" + mName + " will be disabled.").c_str(), (LPCSTR)mName.c_str(), MB_OK | MB_ICONEXCLAMATION);
-			return false;
-		}
-
-		g_serialization->SetUniqueID(g_pluginHandle, 'PRKF');
-		g_serialization->SetRevertCallback(g_pluginHandle, PRKFSerialization::RevertCallback);
-		g_serialization->SetLoadCallback(g_pluginHandle, PRKFSerialization::LoadCallback);
-		g_serialization->SetSaveCallback(g_pluginHandle, PRKFSerialization::SaveCallback);
-		RVA_InitExeAddress();
-		RVA_InitUIManager();
-		RVA_InitAddresses();
-		LevelIncrease__Event_Dispatcher_Init();
-		RVAManager::UpdateAddresses(f4se->runtimeVersion);
-		g_messaging->RegisterListener(g_pluginHandle, "F4SE", OnF4SEMessage);
-		g_messaging->RegisterListener(g_pluginHandle, nullptr, PRKFMessageHandler);
-		if (g_papyrus)
-		{
-			g_papyrus->Register(RegisterFuncs);
-			_MESSAGE("Papyrus Register Succeeded");
-		}
-		if (g_scaleform)
-		{
-			g_scaleform->Register("PRKF", RegisterScaleform);
-			_MESSAGE("Scaleform Register Succeeded");
-		}
-
-		if (!g_branchTrampoline.Create(1024 * 64))
-		{
-			_ERROR("couldn't create branch trampoline. this is fatal. skipping remainder of init process.");
-			return false;
-		}
-
-		if (!g_localTrampoline.Create(1024 * 64, nullptr))
-		{
-			_ERROR("couldn't create codegen buffer. this is fatal. skipping remainder of init process.");
-			return false;
-		}
-		{
-			struct SetPerkPoints_int_Code : Xbyak::CodeGenerator {
-				SetPerkPoints_int_Code(void * buf) : Xbyak::CodeGenerator(4096, buf)
-				{
-					Xbyak::Label retnLabel;
-
-					sub(rsp, 0x28);
-					mov(ptr[rcx + 0xCF1], dl);
-					jmp(ptr[rip + retnLabel]);
-
-					L(retnLabel);
-					dq(SetPerkPoints_int.GetUIntPtr() + 10);
-				}
-			};
-
-			void * codeBuf = g_localTrampoline.StartAlloc();
-			SetPerkPoints_int_Code code(codeBuf);
-			g_localTrampoline.EndAlloc(code.getCurr());
-
-			SetPerkPoints_int_Original = (_SetPerkPoints_int)codeBuf;
-
-			g_branchTrampoline.Write6Branch(SetPerkPoints_int.GetUIntPtr(), (uintptr_t)SetPerkPoints_int_Hook);
-		}
-		{
-			struct LevelupMenuProcessMessage_Code : Xbyak::CodeGenerator {
-				LevelupMenuProcessMessage_Code(void * buf) : Xbyak::CodeGenerator(4096, buf)
-				{
-					Xbyak::Label retnLabel;
-
-					mov(ptr[rsp + 8], rbx);
-					jmp(ptr[rip + retnLabel]);
-
-					L(retnLabel);
-					dq(LevelupMenuProcessMessage.GetUIntPtr() + 5);
-				}
-			};
-
-			void * codeBuf = g_localTrampoline.StartAlloc();
-			LevelupMenuProcessMessage_Code code(codeBuf);
-			g_localTrampoline.EndAlloc(code.getCurr());
-
-			LevelupMenuProcessMessage_Original = (_LevelupMenuProcessMessage)codeBuf;
-
-			g_branchTrampoline.Write5Branch(LevelupMenuProcessMessage.GetUIntPtr(), (uintptr_t)LevelupMenuProcessMessage_Hook);
-		}
-
-
-		return true;
-	}
-
-};
-*/
 extern "C" {
     __declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
     {
@@ -1728,7 +1578,7 @@ extern "C" {
 
         0,	// not version independent
         0,	// not version independent (extended field)
-        { RUNTIME_VERSION_1_10_984, 0 },	// compatible with 1.10.984
+        { CURRENT_RELEASE_RUNTIME, 0 },	// compatible with 1.10.984
 
         0,	// works with any version of the script extender. you probably do not need to put anything here
     };
@@ -1738,46 +1588,20 @@ __declspec(dllexport) bool F4SEPlugin_Load(const F4SEInterface* f4se)
 	gLog.OpenRelative(CSIDL_MYDOCUMENTS, (const char*)("\\My Games\\Fallout4\\F4SE\\" + mName + ".log").c_str());
 	logMessage("query");
 	g_pluginHandle = f4se->GetPluginHandle();
-	// get the papyrus interface and query its version
-	g_papyrus = (F4SEPapyrusInterface *)f4se->QueryInterface(kInterface_Papyrus);
-	if (!g_papyrus)
-	{
-		_MESSAGE("couldn't get papyrus interface");
-		return false;
-	}
-	else {
-		_MESSAGE("got papyrus interface");
-	}
-	g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
-	if (!g_scaleform)
-	{
-		_MESSAGE("couldn't get scaleform interface");
-		return false;
-	}
-	else {
-		_MESSAGE("got scaleform interface");
-	}
-	// Get the messaging interface
-	g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
-	if (!g_messaging) {
-		_MESSAGE("couldn't get messaging interface");
-		return false;
-	}
-	// Get the serialization interface
-	g_serialization = (F4SESerializationInterface *)f4se->QueryInterface(kInterface_Serialization);
-	if (!g_serialization) {
-		_MESSAGE("couldn't get serialization interface");
-		return false;
-	}
 
-			logMessage("load");
-		/*if (CheckModDropClientService() == 0)
-		{
-			_WARNING("WARNING: ModDropClient found.");
-			MessageBox(NULL, (LPCSTR)("ModDropClient found. \n" + mName + " will be disabled.").c_str(), (LPCSTR)mName.c_str(), MB_OK | MB_ICONEXCLAMATION);
-			return false;
-		}
-*/
+	g_papyrus = (F4SEPapyrusInterface *)f4se->QueryInterface(kInterface_Papyrus);
+	if (!g_papyrus)	{_MESSAGE("couldn't get papyrus interface"); return false;}
+	
+	g_scaleform = (F4SEScaleformInterface *)f4se->QueryInterface(kInterface_Scaleform);
+	if (!g_scaleform) {_MESSAGE("couldn't get scaleform interface"); return false;}
+	
+	g_messaging = (F4SEMessagingInterface *)f4se->QueryInterface(kInterface_Messaging);
+	if (!g_messaging) {_MESSAGE("couldn't get messaging interface"); return false;}
+
+	g_serialization = (F4SESerializationInterface *)f4se->QueryInterface(kInterface_Serialization);
+	if (!g_serialization) {_MESSAGE("couldn't get serialization interface"); return false;}
+	
+	logMessage("load");
 		g_serialization->SetUniqueID(g_pluginHandle, 'PRKF');
 		g_serialization->SetRevertCallback(g_pluginHandle, PRKFSerialization::RevertCallback);
 		g_serialization->SetLoadCallback(g_pluginHandle, PRKFSerialization::LoadCallback);
