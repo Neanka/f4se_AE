@@ -24,11 +24,14 @@ public:
 	bool	m_launchSteam;
 	bool	m_noTimeout;
 	bool	m_forceSteamLoader;
+	bool	m_waitForDebugger;
 
 	UInt64	m_affinity;
 
 	std::string	m_altEXE;
 	std::string	m_altDLL;
+
+	std::string	m_languageFromLoader;
 
 private:
 	bool	Verify(void);

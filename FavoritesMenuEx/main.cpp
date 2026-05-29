@@ -333,7 +333,7 @@ extern "C" {
 
         0,	// not version independent
         0,	// not version independent (extended field)
-        { RUNTIME_VERSION_1_10_984, 0 },	// compatible with 1.10.984
+        { CURRENT_RELEASE_RUNTIME, 0 },	// compatible with 1.10.984
 
         0,	// works with any version of the script extender. you probably do not need to put anything here
     };

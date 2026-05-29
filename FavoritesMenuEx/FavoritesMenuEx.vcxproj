@@ -113,7 +113,7 @@
       </Message>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "F:\SteamLibrary\steamapps\common\Fallout 4\Data\F4SE\Plugins\$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "E:\SteamLibrary\steamapps\common\Fallout 4\Data\F4SE\Plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Installing DLL...</Message>

@@ -3,7 +3,7 @@
 #include "f4se_common/f4se_version.h"
 #include <string>
 
-static bool GetFileVersion(const char * path, VS_FIXEDFILEINFO * info, std::string * outProductName)
+bool GetFileVersion(const char * path, VS_FIXEDFILEINFO * info, std::string * outProductName)
 {
 	bool result = false;
 
@@ -62,25 +62,30 @@ static bool GetFileVersionData(const char * path, UInt64 * out, std::string * ou
 		return false;
 	}
 
-	_MESSAGE("dwSignature = %08X", versionInfo.dwSignature);
-	_MESSAGE("dwStrucVersion = %08X", versionInfo.dwStrucVersion);
-	_MESSAGE("dwFileVersionMS = %08X", versionInfo.dwFileVersionMS);
-	_MESSAGE("dwFileVersionLS = %08X", versionInfo.dwFileVersionLS);
-	_MESSAGE("dwProductVersionMS = %08X", versionInfo.dwProductVersionMS);
-	_MESSAGE("dwProductVersionLS = %08X", versionInfo.dwProductVersionLS);
-	_MESSAGE("dwFileFlagsMask = %08X", versionInfo.dwFileFlagsMask);
-	_MESSAGE("dwFileFlags = %08X", versionInfo.dwFileFlags);
-	_MESSAGE("dwFileOS = %08X", versionInfo.dwFileOS);
-	_MESSAGE("dwFileType = %08X", versionInfo.dwFileType);
-	_MESSAGE("dwFileSubtype = %08X", versionInfo.dwFileSubtype);
-	_MESSAGE("dwFileDateMS = %08X", versionInfo.dwFileDateMS);
-	_MESSAGE("dwFileDateLS = %08X", versionInfo.dwFileDateLS);
+	DumpVersionInfo(versionInfo);
 
 	UInt64 version = (((UInt64)versionInfo.dwFileVersionMS) << 32) | versionInfo.dwFileVersionLS;
 
 	*out = version;
 
 	return true;
+}
+
+void DumpVersionInfo(const VS_FIXEDFILEINFO & info)
+{
+	_MESSAGE("dwSignature = %08X", info.dwSignature);
+	_MESSAGE("dwStrucVersion = %08X", info.dwStrucVersion);
+	_MESSAGE("dwFileVersionMS = %08X", info.dwFileVersionMS);
+	_MESSAGE("dwFileVersionLS = %08X", info.dwFileVersionLS);
+	_MESSAGE("dwProductVersionMS = %08X", info.dwProductVersionMS);
+	_MESSAGE("dwProductVersionLS = %08X", info.dwProductVersionLS);
+	_MESSAGE("dwFileFlagsMask = %08X", info.dwFileFlagsMask);
+	_MESSAGE("dwFileFlags = %08X", info.dwFileFlags);
+	_MESSAGE("dwFileOS = %08X", info.dwFileOS);
+	_MESSAGE("dwFileType = %08X", info.dwFileType);
+	_MESSAGE("dwFileSubtype = %08X", info.dwFileSubtype);
+	_MESSAGE("dwFileDateMS = %08X", info.dwFileDateMS);
+	_MESSAGE("dwFileDateLS = %08X", info.dwFileDateLS);
 }
 
 const IMAGE_SECTION_HEADER * GetImageSection(const UInt8 * base, const char * name)
@@ -102,6 +107,50 @@ const IMAGE_SECTION_HEADER * GetImageSection(const UInt8 * base, const char * na
 	return NULL;
 }
 
+// non-relocated image
+bool HasImportedLibrary(const UInt8 * base, const char * name)
+{
+	auto * dosHeader = (const IMAGE_DOS_HEADER *)base;
+	auto * ntHeader = (const IMAGE_NT_HEADERS *)(base + dosHeader->e_lfanew);
+	auto * importDir = (const IMAGE_DATA_DIRECTORY *)&ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+
+	if(!importDir->Size || !importDir->VirtualAddress) return false;
+
+	// resolve RVA -> file offset
+	const auto * sectionHeader = IMAGE_FIRST_SECTION(ntHeader);
+
+	auto LookupRVA = [ntHeader, sectionHeader, base](UInt32 rva) -> const UInt8 *
+	{
+		for(UInt32 i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
+		{
+			const auto * section = &sectionHeader[i];
+
+			if(	(rva >= section->VirtualAddress) &&
+				(rva < section->VirtualAddress + section->SizeOfRawData))
+			{
+				return base + rva - section->VirtualAddress + section->PointerToRawData;
+			}
+		}
+
+		return nullptr;
+	};
+
+	if(const auto * importTable = (const IMAGE_IMPORT_DESCRIPTOR *)LookupRVA(importDir->VirtualAddress))
+	{
+		for(; importTable->Characteristics; ++importTable)
+		{
+			auto * dllName = (const char *)LookupRVA(importTable->Name);
+
+			if(dllName && !_stricmp(dllName, name))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 // steam EXE will have the .bind section
 bool IsSteamImage(const UInt8 * base)
 {
@@ -111,6 +160,24 @@ bool IsSteamImage(const UInt8 * base)
 bool IsUPXImage(const UInt8 * base)
 {
 	return GetImageSection(base, "UPX0") != NULL;
+}
+
+static bool IsWinStoreImage(const UInt8 * base)
+{
+	// haven't seen this either, but if it imports this then it's a unique build
+	return HasImportedLibrary(base, "api-ms-win-core-psm-appnotify-l1-1-0.dll");
+}
+
+static bool IsGOGImage(const UInt8 * base)
+{
+	// haven't seen it but they may have a unique build for achievements
+	return HasImportedLibrary(base, "Galaxy64.dll");
+}
+
+static bool IsEpicImage(const UInt8 * base)
+{
+	// haven't seen it but let's assume they have a unique build for achievements
+	return HasImportedLibrary(base, "eossdk-win64-shipping.dll");
 }
 
 bool ScanEXE(const char * path, ProcHookInfo * hookInfo)
@@ -132,16 +199,25 @@ bool ScanEXE(const char * path, ProcHookInfo * hookInfo)
 		if(fileBase)
 		{
 			// scan for packing type
-			bool	isSteam = IsSteamImage(fileBase);
-			bool	isUPX = IsUPXImage(fileBase);
-
-			if(isUPX)
+			if(IsUPXImage(fileBase))
 			{
 				hookInfo->procType = kProcType_Packed;
 			}
-			else if(isSteam)
+			else if(IsSteamImage(fileBase))
 			{
 				hookInfo->procType = kProcType_Steam;
+			}
+			else if(IsWinStoreImage(fileBase))
+			{
+				hookInfo->procType = kProcType_WinStore;
+			}
+			else if(IsGOGImage(fileBase))
+			{
+				hookInfo->procType = kProcType_GOG;
+			}
+			else if(IsEpicImage(fileBase))
+			{
+				hookInfo->procType = kProcType_Epic;
 			}
 			else
 			{
@@ -184,6 +260,9 @@ bool IdentifyEXE(const char * procName, bool isEditor, std::string * dllSuffix, 
 	_MESSAGE("version = %016I64X", version);
 	_MESSAGE("product name = %s", productName.c_str());
 
+	hookInfo->version = version;
+	hookInfo->packedVersion = MAKE_EXE_VERSION(version >> 48, version >> 32, version >> 16);
+
 	if(productName == "F4SE")
 	{
 		_MESSAGE("found an F4SE component");
@@ -205,16 +284,31 @@ bool IdentifyEXE(const char * procName, bool isEditor, std::string * dllSuffix, 
 
 	switch(hookInfo->procType)
 	{
-	case kProcType_Steam:	_MESSAGE("steam exe"); break;
-	case kProcType_Normal:	_MESSAGE("normal exe"); break;
-	case kProcType_Packed:	_MESSAGE("packed exe"); break;
+	case kProcType_Steam:		_MESSAGE("steam exe"); break;
+	case kProcType_Normal:		_MESSAGE("normal exe"); break;
+	case kProcType_Packed:		_MESSAGE("packed exe"); break;
+	case kProcType_WinStore:	_MESSAGE("winstore exe"); break;
+	case kProcType_GOG:			_MESSAGE("gog exe"); break;
+	case kProcType_Epic:		_MESSAGE("epic exe"); break;
 	case kProcType_Unknown:
-	default:				_MESSAGE("unknown exe type"); break;
+	default:					_MESSAGE("unknown exe type"); break;
+	}
+
+	if(hookInfo->procType == kProcType_WinStore)
+	{
+		PrintLoaderError("The Windows Store (gamepass) version of Fallout 4 is not supported.");
+		return false;
+	}
+
+	if(hookInfo->procType == kProcType_Epic)
+	{
+		PrintLoaderError("The Epic Store version of Fallout 4 is not supported.");
+		return false;
 	}
 
 	bool result = false;
 
-	const UInt64 kCurVersion = 0x0001000A001A0000;	// 1.10.26.0
+	const UInt64 kCurVersion = 0x0001000B00DD0000;	// 1.11.221.0
 
 	// convert version resource to internal version format
 	UInt32 versionInternal = MAKE_EXE_VERSION(version >> 48, version >> 32, version >> 16);
@@ -267,14 +361,24 @@ bool IdentifyEXE(const char * procName, bool isEditor, std::string * dllSuffix, 
 	}
 	else
 	{
+		char name[128];
+		sprintf_s(name, _countof(name), "%d_%d_%d",
+			int((kCurVersion >> 48) & 0xFFFF),
+			int((kCurVersion >> 32) & 0xFFFF),
+			int((kCurVersion >> 16) & 0xFFFF));
+		*dllSuffix = name;
+
 		switch(hookInfo->procType)
 		{
 		case kProcType_Steam:
 		case kProcType_Normal:
-			*dllSuffix = "1_10_26";
+			result = true;
+			break;
+
+		case kProcType_GOG:
+			*dllSuffix += "_gog";
 
 			result = true;
-
 			break;
 
 		case kProcType_Packed:

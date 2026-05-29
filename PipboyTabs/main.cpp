@@ -105,48 +105,6 @@ void UpdateMenu_int(GFxMovieRoot* root)
 			}			
 			TESForm* secondForm = (j < f.list2.size()) ? f.list2[j] : nullptr;
 			Populate_entry(&skarray, root, baseSkill, secondForm, filterVal, f.stringList, maxVal);
-			/*
-			switch (baseSkill->formType)
-			{
-			case 11: // GLOB
-				if (f.list2.size() > j)
-				{
-					Populate_GLOB_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, TESGlobal), f.list2[j], filterVal, f.stringList);
-				}
-				else
-				{
-					Populate_GLOB_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, TESGlobal), nullptr, filterVal, f.stringList);
-				}
-				break;
-			case 98: // AVIF
-				PopulateSkillEntry(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, ActorValueInfo), filterVal, f.stringList);
-				break;
-			case 108: // MESG
-				if (f.list2.size() > j)
-				{
-					Populate_MESG_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, BGSMessage), f.list2[j], filterVal, f.stringList);
-				}
-				else
-				{
-					Populate_MESG_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, BGSMessage), nullptr, filterVal, f.stringList);
-				}
-				break;
-			case 30: // BOOK
-				if (f.list2.size() > j)
-				{
-					Populate_BOOK_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, TESObjectBOOK), f.list2[j], filterVal, f.stringList);
-				}
-				else
-				{
-					Populate_BOOK_FORM_Pair(&skarray, root, DYNAMIC_CAST(baseSkill, TESForm, TESObjectBOOK), nullptr, filterVal, f.stringList);
-				}
-				break;
-			default:
-				break;
-			}
-
-			;
-			*/
 		}
 		arrArgs[4].SetMember("skillsList", &skarray);
 
@@ -261,156 +219,7 @@ void Populate_entry(GFxValue* dst, GFxMovieRoot* root, TESForm* form1, TESForm* 
 	dst->PushBack(&arrArg);
 
 }
-/*
-void Populate_GLOB_FORM_Pair(GFxValue * dst, GFxMovieRoot * root, TESGlobal* glob, TESForm* form, int filter, std::vector<std::string> stringValue)
-{
-	GFxValue arrArg;
-	root->CreateObject(&arrArg);
-	float value = glob->value;
-	if (form)
-	{
-		switch (form->formType)
-		{
-		case 98:
-			RegisterString(&arrArg, root, "text", static_cast<ActorValueInfo*>(form)->fullName.name);
-			RegisterString(&arrArg, root, "description", GetDescription(static_cast<ActorValueInfo*>(form)).c_str());
-			break;
-		case 108:
-			RegisterString(&arrArg, root, "text", static_cast<BGSMessage*>(form)->fullName.name);
-			RegisterString(&arrArg, root, "description", GetDescription(static_cast<BGSMessage*>(form)).c_str());
-			break;
-		case 30:
-			RegisterString(&arrArg, root, "text", static_cast<TESObjectBOOK*>(form)->fullName.name);
-			RegisterString(&arrArg, root, "description", GetDescription(static_cast<TESObjectBOOK*>(form)).c_str());
-			break;
-		default:
-			break;
-		}
-	}
-	else
-	{
-		RegisterString(&arrArg, root, "text", glob->editorID);
-		RegisterString(&arrArg, root, "description", "");
-	}
-	
-	RegisterBool(&arrArg, "readed", PBTSerialization::CheckRN(glob->formID));
-	RegisterString(&arrArg, root, "qname", glob->editorID);
-	if (stringValue.size() > (int)value)
-	{
-		RegisterString(&arrArg, root, "stringValue", stringValue[(int)value].c_str());
-	}
-	else
-	{
-		RegisterString(&arrArg, root, "stringValue", "");
-	}
 
-
-	RegisterInt(&arrArg, "formid", glob->formID);
-	RegisterNumber(&arrArg, "value", value);
-	RegisterNumber(&arrArg, "basevalue", value);
-	RegisterNumber(&arrArg, "modifier", 0);
-	RegisterNumber(&arrArg, "buffedvalue", value);
-	RegisterInt(&arrArg, "filterFlag", filter);
-	dst->PushBack(&arrArg);
-	//_DMESSAGE("EdID: %s, FormID: %i, value: %i, description %s", baseSkill->avName, baseSkill->formID, (int)value, GetDescription(baseSkill).c_str());
-}
-
-void Populate_MESG_FORM_Pair(GFxValue * dst, GFxMovieRoot * root, BGSMessage* msg, TESForm* form, int filter, std::vector<std::string> stringValue)
-{
-	GFxValue arrArg;
-	root->CreateObject(&arrArg);
-	float value = 0;
-	float buffedValue = 0;
-	if (form)
-	{
-		switch (form->formType)
-		{
-		case 98: // AVIF
-			value = GetBaseAV(static_cast<ActorValueInfo*>(form), (*g_player));
-			buffedValue = GetFullAV(static_cast<ActorValueInfo*>(form), (*g_player));
-			break;
-		case 11: // GLOB
-			value = static_cast<TESGlobal*>(form)->value;
-			buffedValue = value;
-			break;
-		default:
-			break;
-		}
-	}
-
-	RegisterBool(&arrArg, "readed", PBTSerialization::CheckRN(msg->formID));
-	RegisterString(&arrArg, root, "text", msg->fullName.name);
-	RegisterString(&arrArg, root, "qname", msg->GetEditorID());
-	RegisterString(&arrArg, root, "description", GetDescription(msg).c_str());
-	if (stringValue.size() > (int)value)
-	{
-		RegisterString(&arrArg, root, "stringValue", stringValue[(int)value].c_str());
-	}
-	else
-	{
-		RegisterString(&arrArg, root, "stringValue", "");
-	}
-	RegisterInt(&arrArg, "formid", msg->formID);
-
-	RegisterNumber(&arrArg, "value", buffedValue);
-	RegisterNumber(&arrArg, "basevalue", value);
-	RegisterNumber(&arrArg, "modifier", buffedValue - value);
-	RegisterNumber(&arrArg, "buffedvalue", buffedValue);
-
-	RegisterInt(&arrArg, "filterFlag", filter);
-
-	dst->PushBack(&arrArg);
-	//_DMESSAGE("EdID: %s, FormID: %i, value: %i, description %s", baseSkill->avName, baseSkill->formID, (int)value, GetDescription(baseSkill).c_str());
-}
-
-void Populate_BOOK_FORM_Pair(GFxValue * dst, GFxMovieRoot * root, TESObjectBOOK* book, TESForm* form, int filter, std::vector<std::string> stringValue)
-{
-	GFxValue arrArg;
-	root->CreateObject(&arrArg);
-	float value = 0;
-	float buffedValue = 0;
-	if (form)
-	{
-		switch (form->formType)
-		{
-		case 98: // AVIF
-			value = GetBaseAV(static_cast<ActorValueInfo*>(form), (*g_player));
-			buffedValue = GetFullAV(static_cast<ActorValueInfo*>(form), (*g_player));
-			break;
-		case 11: // GLOB
-			value = static_cast<TESGlobal*>(form)->value;
-			buffedValue = value;
-			break;
-		default:
-			break;
-		}
-	}
-
-	RegisterBool(&arrArg, "readed", PBTSerialization::CheckRN(book->formID));
-	RegisterString(&arrArg, root, "text", book->fullName.name);
-	RegisterString(&arrArg, root, "qname", book->GetEditorID());
-	RegisterString(&arrArg, root, "description", GetDescription(book).c_str());
-	if (stringValue.size() > (int)value)
-	{
-		RegisterString(&arrArg, root, "stringValue", stringValue[(int)value].c_str());
-	}
-	else
-	{
-		RegisterString(&arrArg, root, "stringValue", "");
-	}
-	RegisterInt(&arrArg, "formid", book->formID);
-
-	RegisterNumber(&arrArg, "value", buffedValue);
-	RegisterNumber(&arrArg, "basevalue", value);
-	RegisterNumber(&arrArg, "modifier", buffedValue - value);
-	RegisterNumber(&arrArg, "buffedvalue", buffedValue);
-
-	RegisterInt(&arrArg, "filterFlag", filter);
-
-	dst->PushBack(&arrArg);
-	//_DMESSAGE("EdID: %s, FormID: %i, value: %i, description %s", baseSkill->avName, baseSkill->formID, (int)value, GetDescription(baseSkill).c_str());
-}
-*/
 void PopulateSkillEntry(GFxValue* dst, GFxMovieRoot* root, ActorValueInfo* baseSkill, int filter, const std::vector<std::string>& stringValue)
 {
 	if (!baseSkill || !dst || !root || !g_player) return;
@@ -645,13 +454,13 @@ void fillAvifsPages()
 
 		std::string StringArrayLoc = PBT_GetConfigOptionString(modSettingFiles[i].cFileName, "Main", "StringArray_"+ std::string(setting->data.s));
 		_MESSAGE("StringArray %s", StringArray.c_str());
-		if (StringArrayLoc.size() > 0)
+		if (!StringArrayLoc.empty())
 		{
 			_MESSAGE("StringArrayLoc %s", StringArrayLoc.c_str());
 			StringArray = StringArrayLoc;
 		}
 
-		if (StringArray.size() > 0)
+		if (!StringArray.size())
 		{
 			std::size_t found = 0;
 			std::size_t found2 = StringArray.find("|");
@@ -694,8 +503,9 @@ void fillAvifsPages()
 		std::vector<TESForm*> filterArr;
 		std::string FilterList = PBT_GetConfigOptionString(modSettingFiles[i].cFileName, "Main", "FilterList");
 		_MESSAGE("FilterList %s", FilterList.c_str());
-		if (FilterList.size() > 0)
+		if (!FilterList.empty())
 		{
+			filterArr.reserve(512);
 			auto _FilterList = DYNAMIC_CAST(GetFormFromIdentifier(FilterList), TESForm, BGSListForm);
 			if (_FilterList == nullptr) {
 				_DMESSAGE("form is not BGSListForm");
@@ -706,7 +516,7 @@ void fillAvifsPages()
 				for (int j = 0; j < _FilterList->forms.count; j++)
 				{
 					TESForm * baseForm = _FilterList->forms.entries[j]; //GLOB or AVIF
-					if (baseForm->formType == 11 || baseForm->formType == 98)
+					if (baseForm->formType == kFormType_GLOB || baseForm->formType == kFormType_AVIF)
 					{
 						filterArr.push_back(baseForm);
 					}
@@ -716,15 +526,13 @@ void fillAvifsPages()
 					}
 				}
 			}
+			filterArr.shrink_to_fit();
 		}
 		else
 		{
 			_DMESSAGE("AVIFsList is empty");
 		}
-		str.filters = filterArr;
-
-
-
+		str.filters = std::move(filterArr);
 
 		avifsPages.push_back(str);
 	}

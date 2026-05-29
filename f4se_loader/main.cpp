@@ -1,23 +1,85 @@
 #include <ShlObj.h>
 #include "f4se_common/f4se_version.h"
 #include "f4se_common/Utilities.h"
+#include "f4se_common/CoreInfo.h"
 #include "f4se_loader_common/LoaderError.h"
 #include "f4se_loader_common/IdentifyEXE.h"
 #include "f4se_loader_common/Steam.h"
 #include "f4se_loader_common/Inject.h"
+#include <algorithm>
 #include <string>
+#include <type_traits>
+#include <vector>
 #include "common/IFileStream.h"
+#include <Shlwapi.h>
 #include <tlhelp32.h>
 #include "Options.h"
+#include "SigCheck.h"
 
 IDebugLog gLog;
 
-static void PrintModuleInfo(UInt32 procID);
-static void PrintProcessInfo();
+class EarlyTerminationHandler
+{
+public:
+	void start(HANDLE proc)
+	{
+		if(m_proc == INVALID_HANDLE_VALUE)
+		{
+			m_proc = proc;
+
+			SetConsoleCtrlHandler(HandlerWrapper, true);
+		}
+	}
+
+	void stop()
+	{
+		if(m_proc != INVALID_HANDLE_VALUE)
+		{
+			SetConsoleCtrlHandler(HandlerWrapper, false);
+
+			m_proc = INVALID_HANDLE_VALUE;
+		}
+	}
+
+private:
+	HANDLE	m_proc = INVALID_HANDLE_VALUE;
+
+	static BOOL HandlerWrapper(DWORD type)
+	{
+		return gEarlyTerminationHandler.Handler(type);
+	}
+
+	BOOL Handler(DWORD type)
+	{
+		_MESSAGE("early termination %d", type);
+
+		TerminateProcess(m_proc, 0);
+		
+		return true;	// "no other handlers are called and the system terminates the process"
+	}
+} gEarlyTerminationHandler;
+
+void AugmentEnvironment(const std::string& procPath, const std::string& dllPath)
+{
+	const auto getFilename = [](const std::string& fullPath) {
+		char runtime[MAX_PATH] = { '\0' };
+		if (fullPath.length() < std::extent<decltype(runtime)>::value)
+		{
+			std::copy(fullPath.begin(), fullPath.end(), runtime);
+			PathStripPathA(runtime);
+		}
+
+		return std::string(runtime);
+	};
+
+	SetEnvironmentVariableA("F4SE_DLL", getFilename(dllPath).c_str());
+	SetEnvironmentVariableA("F4SE_RUNTIME", getFilename(procPath).c_str());
+	SetEnvironmentVariableA("F4SE_WAITFORDEBUGGER", (g_options.m_waitForDebugger ? "1" : "0"));
+}
 
 int main(int argc, char ** argv)
 {
-	gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\Fallout4\\F4SE\\f4se_loader.log");
+	gLog.OpenRelative(CSIDL_MYDOCUMENTS, "\\My Games\\" SAVE_FOLDER_NAME "\\F4SE\\f4se_loader.log");
 	gLog.SetPrintLevel(IDebugLog::kLevel_FatalError);
 	gLog.SetLogLevel(IDebugLog::kLevel_DebugMessage);
 
@@ -99,7 +161,7 @@ int main(int argc, char ** argv)
 	}
 
 	const std::string & runtimeDir = GetRuntimeDirectory();
-	std::string procPath = runtimeDir + "\\" + procName;
+	std::string procPath = runtimeDir + procName;
 
 	if(g_options.m_altEXE.size())
 	{
@@ -114,14 +176,34 @@ int main(int argc, char ** argv)
 		IFileStream	fileCheck;
 		if(!fileCheck.Open(procPath.c_str()))
 		{
-			if(usedCustomRuntimeName)
+			DWORD err = GetLastError();
+			if(err)
+				_MESSAGE("exe open check error = %08X", err);
+
+			bool msStore = false;
+
+			if(err == ERROR_ACCESS_DENIED)
 			{
-				// hurr durr
+				// this might be ms store
+				std::string manifestPath = runtimeDir + "appxmanifest.xml";
+
+				if(fileCheck.Open(manifestPath.c_str()))
+				{
+					msStore = true;
+				}
+			}
+
+			if(msStore)
+			{
+				PrintLoaderError("You have the MS Store/Gamepass version of Fallout 4, which is not compatible with F4SE.");
+			}
+			else if(usedCustomRuntimeName)
+			{
 				PrintLoaderError("Couldn't find %s. You have customized the runtime name via F4SE's .ini file, and that file does not exist. This can usually be fixed by removing the RuntimeName line from the .ini file.)", procName.c_str());
 			}
 			else
 			{
-				PrintLoaderError("Couldn't find %s.", procName.c_str());
+				PrintLoaderError("Couldn't find %s. You have installed the loader to the wrong folder.", procName.c_str());
 			}
 
 			return 1;
@@ -155,9 +237,6 @@ int main(int argc, char ** argv)
 		return 1;
 	}
 
-	if(g_options.m_crcOnly)
-		return 0;
-
 	// build dll path
 	std::string	dllPath;
 	if(dllHasFullPath)
@@ -166,7 +245,7 @@ int main(int argc, char ** argv)
 	}
 	else
 	{
-		dllPath = runtimeDir + "\\" + baseDllName + "_" + dllSuffix + ".dll";
+		dllPath = runtimeDir + baseDllName + "_" + dllSuffix + ".dll";
 	}
 
 	_MESSAGE("dll = %s", dllPath.c_str());
@@ -181,6 +260,89 @@ int main(int argc, char ** argv)
 			return 1;
 		}
 	}
+
+	// check to make sure the dll makes sense
+	{
+		bool dllOK = false;
+		UInt32 dllVersion = 0;
+
+		HMODULE resourceHandle = (HMODULE)LoadLibraryEx(dllPath.c_str(), nullptr, LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+		if(resourceHandle)
+		{
+			if(Is64BitDLL(resourceHandle))
+			{
+				auto * version = (const F4SECoreVersionData *)GetResourceLibraryProcAddress(resourceHandle, "F4SECore_Version");
+				if(version)
+				{
+					dllVersion = version->runtimeVersion;
+
+					if(	(version->dataVersion == F4SECoreVersionData::kVersion) &&
+						(version->runtimeVersion == procHookInfo.packedVersion))
+					{
+						dllOK = true;
+					}
+				}
+			}
+
+			FreeLibrary(resourceHandle);
+		}
+
+		if(dllOK)
+		{
+			if(!CheckDLLSignature(dllPath))
+				dllOK = false;
+		}
+
+		if(!dllOK)
+		{
+			bool preSigning = false;
+
+			VS_FIXEDFILEINFO info;
+			std::string productName;
+
+			if(GetFileVersion(dllPath.c_str(), &info, &productName))
+			{
+				_MESSAGE("DLL version");
+				DumpVersionInfo(info);
+				_MESSAGE("productName = %s", productName.c_str());
+
+				UInt64 fullVersion = (UInt64(info.dwFileVersionMS) << 32) | info.dwFileVersionLS;
+				UInt64 kFirstSignedVersion = 0x0000000000070003;
+
+				if(fullVersion < kFirstSignedVersion)
+					preSigning = true;
+			}
+			else
+			{
+				_MESSAGE("couldn't get file version info");
+			}
+
+			if(preSigning)
+			{
+				PrintLoaderError(
+					"Old F4SE DLL (%s).\n"
+					"Please make sure that you have replaced all files with their new versions.\n"
+					"DLL version (%d.%d.%d) EXE version (%d.%d.%d)",
+					dllPath.c_str(),
+					(info.dwFileVersionMS >> 16) & 0xFFFF,
+					(info.dwFileVersionLS >> 16) & 0xFFFF,
+					info.dwFileVersionLS & 0xFFFF,
+					F4SE_VERSION_INTEGER, F4SE_VERSION_INTEGER_MINOR, F4SE_VERSION_INTEGER_BETA);
+			}
+			else
+			{
+				PrintLoaderError(
+					"Bad F4SE DLL (%s).\n"
+					"Do not rename files; it will not magically make anything work.\n"
+					"%08X %08X", dllPath.c_str(), procHookInfo.packedVersion, dllVersion);
+			}
+
+			return 1;
+		}
+	}
+
+	if(g_options.m_crcOnly)
+		return 0;
 
 	// steam setup
 	if(procHookInfo.procType == kProcType_Steam)
@@ -217,13 +379,19 @@ int main(int argc, char ** argv)
 
 	startupInfo.cb = sizeof(startupInfo);
 
+	AugmentEnvironment(procPath, dllPath);
+	
+	DWORD createFlags = CREATE_SUSPENDED;
+	if(g_options.m_setPriority)
+		createFlags |= g_options.m_priority;
+	
 	if(!CreateProcess(
 		procPath.c_str(),
 		NULL,	// no args
 		NULL,	// default process security
 		NULL,	// default thread security
 		FALSE,	// don't inherit handles
-		CREATE_SUSPENDED,
+		createFlags,
 		NULL,	// no new environment
 		NULL,	// no new cwd
 		&startupInfo, &procInfo))
@@ -239,6 +407,8 @@ int main(int argc, char ** argv)
 
 		return 1;
 	}
+
+	gEarlyTerminationHandler.start(procInfo.hProcess);
 
 	_MESSAGE("main thread id = %d", procInfo.dwThreadId);
 
@@ -256,32 +426,12 @@ int main(int argc, char ** argv)
 	bool	injectionSucceeded = false;
 	UInt32	procType = procHookInfo.procType;
 
-	if(g_options.m_forceSteamLoader)
-	{
-		_MESSAGE("forcing steam loader");
-		procType = kProcType_Steam;
-	}
-
 	// inject the dll
 	switch(procType)
 	{
 	case kProcType_Steam:
-		{
-			std::string	steamHookDllPath = runtimeDir + "\\f4se_steam_loader.dll";
-
-			injectionSucceeded = InjectDLLThread(&procInfo, steamHookDllPath.c_str(), true, g_options.m_noTimeout);
-		}
-		break;
-
 	case kProcType_Normal:
-#if 0
-		if(InjectDLL(&procInfo, dllPath.c_str(), &procHookInfo))
-		{
-			injectionSucceeded = true;
-		}
-#else
 		injectionSucceeded = InjectDLLThread(&procInfo, dllPath.c_str(), true, g_options.m_noTimeout);
-#endif
 		break;
 
 	default:
@@ -308,82 +458,15 @@ int main(int argc, char ** argv)
 			_WARNING("Try running f4se_loader as an administrator, or check for conflicts with a virus scanner.");
 		}
 
-		if(g_options.m_moduleInfo)
-		{
-			Sleep(1000 * 3);	// wait 3 seconds
-
-			PrintModuleInfo(procInfo.dwProcessId);
-			PrintProcessInfo();
-		}
-
 		if(g_options.m_waitForClose)
 			WaitForSingleObject(procInfo.hProcess, INFINITE);
 	}
+
+	gEarlyTerminationHandler.stop();
 
 	// clean up
 	CloseHandle(procInfo.hProcess);
 	CloseHandle(procInfo.hThread);
 
 	return 0;
-}
-
-static void PrintModuleInfo(UInt32 procID)
-{
-	HANDLE	snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, procID);
-	if(snap != INVALID_HANDLE_VALUE)
-	{
-		MODULEENTRY32	module;
-
-		module.dwSize = sizeof(module);
-
-		if(Module32First(snap, &module))
-		{
-			do 
-			{
-				_MESSAGE("%08Xx%08X %08X %s %s", module.modBaseAddr, module.modBaseSize, module.hModule, module.szModule, module.szExePath);
-			}
-			while(Module32Next(snap, &module));
-		}
-		else
-		{
-			_ERROR("PrintModuleInfo: Module32First failed (%d)", GetLastError());
-		}
-
-		CloseHandle(snap);
-	}
-	else
-	{
-		_ERROR("PrintModuleInfo: CreateToolhelp32Snapshot failed (%d)", GetLastError());
-	}
-}
-
-static void PrintProcessInfo()
-{
-	HANDLE	snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if(snap != INVALID_HANDLE_VALUE)
-	{
-		PROCESSENTRY32	proc;
-
-		proc.dwSize = sizeof(PROCESSENTRY32);
-		
-		if(Process32First(snap, &proc))
-		{
-			do
-			{
-				_MESSAGE("%s", proc.szExeFile);
-				proc.dwSize = sizeof(PROCESSENTRY32);
-			}
-			while (Process32Next(snap, &proc));
-		}
-		else
-		{
-			_ERROR("PrintProcessInfo: Process32First failed (%d)", GetLastError());
-		}
-
-		CloseHandle(snap);
-	}
-	else
-	{
-		_ERROR("PrintProcessInfo: CreateToolhelp32Snapshot failed (%d)", GetLastError());
-	}
 }
