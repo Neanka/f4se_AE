@@ -251,6 +251,7 @@ void RVA_InitExeAddress()
 {
     ExecuteCommand = RVA<_ExecuteCommand>(
         "ExecuteCommand (Console::ExecuteCommand)", {
+            { RUNTIME_VERSION_1_11_221, 0x01035EC0 },
             { RUNTIME_VERSION_1_11_191, 0x01035D20 },
             { RUNTIME_VERSION_1_10_984, 0x00FB0250 },
             {RUNTIME_VERSION_1_10_162, 0x0125B4A0},
@@ -295,6 +296,7 @@ void RVA_InitPipboy() // updated for NG
 {
     g_PipboyDataManager = RVA<PipboyDataManager*>(
         "g_PipboyDataManager", {
+            { RUNTIME_VERSION_1_11_221, 0x030DDA78 },
             {RUNTIME_VERSION_1_10_163, 0x058D0AF0},
             {RUNTIME_VERSION_1_10_162, 0x058D0AF0},
             {RUNTIME_VERSION_1_10_130, 0x058D0AF0},
@@ -317,10 +319,12 @@ void RVA_InitFavorites() // NG updated
 {
     FavoritesManager_useQuickkey = RVA<_FavoritesManager_useQuickkey>(
         "FavoritesManager_useQuickkey (FavoritesManager::UseQuickkeyItem)", {
+            { RUNTIME_VERSION_1_11_221, 0x01047810 },
             {RUNTIME_VERSION_1_10_163, 0x0126FCB0},
         }, "E8 ? ? ? ? 48 8B 1D ? ? ? ? E8 ? ? ? ? 41 B8 ? ? ? ?", 0, 1, 5); // NG
     FavoritesManager_getQuickKeyIndex = RVA<_FavoritesManager_getQuickKeyIndex>(
     "FavoritesManager_getQuickKeyIndex (FavoritesManager::GetQuickkeyIndexFromString)", {
+        { RUNTIME_VERSION_1_11_221, 0x01048CD0 },
         {RUNTIME_VERSION_1_10_163, 0x01271480},
     }, "E8 ? ? ? ? 83 F8 0C 74 04", 0, 1, 5); // NG
 }
@@ -349,6 +353,7 @@ void RVA_InitInventory() // ng updated
 {
     GetItemCount = RVA<_GetItemCount>(
         "GetItemCount", {
+            { RUNTIME_VERSION_1_11_221, 0x01175170 },
             {RUNTIME_VERSION_1_10_163, 0x013FB700},
             {RUNTIME_VERSION_1_10_162, 0x013FB700},
             {RUNTIME_VERSION_1_10_130, 0x013FB5E0},
@@ -369,6 +374,7 @@ void RVA_InitInventory() // ng updated
         }, "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 40 49 8B F9 C7 44 24 30 00 00 00 00"); // NG
     EquipItem_int = RVA<_EquipItem_int>(
         "EquipItem_int (ActorEquipManager::EquipObject)", {
+            { RUNTIME_VERSION_1_11_221, 0x00CE5A90 },
             {RUNTIME_VERSION_1_10_163, 0x00E1BCD0},
             {RUNTIME_VERSION_1_10_162, 0x00E1BCD0},
             {RUNTIME_VERSION_1_10_130, 0x00E1BBB0},
@@ -384,6 +390,7 @@ void RVA_InitInventory() // ng updated
         }, "E8 ? ? ? ? 48 8B 4C 24 ? EB 5E", 0, 1, 5); //ng
     UnEquipItem_int = RVA<_UnEquipItem_int>(
         "UnEquipItem_int (ActorEquipManager::UnEquipObject)", {
+            { RUNTIME_VERSION_1_11_221, 0x00CE5F30 },
             {RUNTIME_VERSION_1_10_163, 0x00E1C0B0},
             {RUNTIME_VERSION_1_10_162, 0x00E1C0B0},
             {RUNTIME_VERSION_1_10_130, 0x00E1BF90},
@@ -399,6 +406,7 @@ void RVA_InitInventory() // ng updated
         }, "E8 ? ? ? ? 41 FF C6 D1 C5", 0, 1, 5); //NG
     unk_itemManager = RVA<void*>(
         "unk_itemManager (g_ActorEquipManager)", {
+            { RUNTIME_VERSION_1_11_221, 0x031E33A8 },
             {RUNTIME_VERSION_1_10_163, 0x059D75C8},
             {RUNTIME_VERSION_1_10_162, 0x059D75C8},
             {RUNTIME_VERSION_1_10_130, 0x059D7598},
@@ -415,11 +423,13 @@ void RVA_InitInventory() // ng updated
         3, 7); // NG
     g_itemMenuDataMgr = RVA<ItemMenuDataManager*>(
         "g_itemMenuDataMgr (g_BGSInventoryInterface)", {
+            { RUNTIME_VERSION_1_11_221, 0x030E13F0 },
             {RUNTIME_VERSION_1_10_163, 0x058D4980},
             {RUNTIME_VERSION_1_10_162, 0x058D4980},
         }, "48 8B 0D ? ? ? ? 48 8B DA C6 44 24 38 00", 0, 3, 7); //ng
     getInventoryItemByHandleID = RVA<_getInventoryItemByHandleID>(
         "getInventoryItemByHandleID (BGSInventoryInterface::RequestInventoryItem)", {
+            { RUNTIME_VERSION_1_11_221, 0x003478F0 },
             {RUNTIME_VERSION_1_10_163, 0x001A3650},
             {RUNTIME_VERSION_1_10_162, 0x001A3650},
         }, "E8 ? ? ? ? 44 0F B6 54 24 ?", 0, 1, 5); //ng
@@ -437,18 +447,22 @@ void RVA_InitSpells() // NG updated
 {
     Spell_Cast = RVA<_Spell_Cast>(
     "Spell_Cast (GameScript::anonymous_namespace::latentMem_Spell_Cast)", {
+        { RUNTIME_VERSION_1_11_221, 0x0113F4C0 },
         { RUNTIME_VERSION_1_10_163, 0x013E77F0 },
     }, "40 53 48 83 EC 40 83 3D ?? ?? ?? ?? ?? 48"); // ng
     Actor_DispellSpell = RVA<_Actor_DispellSpell>(
     "Actor_DispellSpell (GameScript::anonymous_namespace::mem_Actor_DispelSpell)", {
+        { RUNTIME_VERSION_1_11_221, 0x010F75F0 },
         {RUNTIME_VERSION_1_10_163, 0x01387500},
     }, "48 89 5C 24 ? 57 48 83 EC 30 48 8B 1D ? ? ? ? 48 8D 4C 24 ? 49 8B D0 49 8B F9 E8 ? ? ? ? 48 8B D0 4C 8B C7 48 8B CB E8 ? ? ? ? 48 8B 5C 24 ? B0 01 48 83 C4 30 5F C3 CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 48 89 5C 24 ? 57 48 83 EC 40"); //ng
     ImageSpaceModifier_Apply = RVA<_ImageSpaceModifier_Apply>(
     "ImageSpaceModifier_Apply (GameScript::anonymous_namespace::mem_ImageSpaceModifier_Apply)", {
+        { RUNTIME_VERSION_1_11_221, 0x01146260 },
         { RUNTIME_VERSION_1_10_163, 0x013F1320 },
     }, "49 8B C8 0F 28 CB"); // ng
     ImageSpaceModifier_Remove = RVA<_ImageSpaceModifier_Remove>(
     "ImageSpaceModifier_Remove (GameScript::anonymous_namespace::mem_ImageSpaceModifier_Remove)", {
+        { RUNTIME_VERSION_1_11_221, 0x011462D0 },
         { RUNTIME_VERSION_1_10_163, 0x013F1390 },
     }, "49 8B C8 0F 28 CB", 0x70);  //ng
     
@@ -488,6 +502,7 @@ void RVA_InitAddresses()
 {
     HasPerk = RVA<_HasPerk>(
         "HasPerk (Actor::GetPerkRank)", {
+            { RUNTIME_VERSION_1_11_221, 0x00C92030 },
             { RUNTIME_VERSION_1_11_191, 0x00C91EA0 },
             { RUNTIME_VERSION_1_10_984, 0x00C0C3F0 },
             {RUNTIME_VERSION_1_10_162, 0x00DA6600},
@@ -509,6 +524,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 0F B6 77 5A", 0, 1, 5); // ng
     AddPerk = RVA<_AddPerk>(
         "AddPerk", {
+            { RUNTIME_VERSION_1_11_221, 0x00C91C80 },
             { RUNTIME_VERSION_1_11_191, 0x00C91AF0 },
             { RUNTIME_VERSION_1_10_984, 0x00C0C040 },
             {RUNTIME_VERSION_1_10_162, 0x00DA6200},
@@ -530,6 +546,7 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 08 48 89 6C 24 10 56 57 41 56 48 83 EC 40 48 8D 99 34 04 00 00"); // ng
     GetLevel = RVA<_GetLevel>(
         "GetLevel (Actor::GetLevel)", {
+            { RUNTIME_VERSION_1_11_221, 0x00C63050 },
             { RUNTIME_VERSION_1_11_191, 0x00C62EC0 },
             { RUNTIME_VERSION_1_10_984, 0x00BDD410 },
             {RUNTIME_VERSION_1_10_162, 0x00D79E90},
@@ -551,6 +568,7 @@ void RVA_InitAddresses()
         }, "48 8B 89 E0 00 00 00 48 83 C1 68 E9 ? ? ? ?"); //ng
     g_main = RVA<uintptr_t>(
         "g_main (broken atm)", {
+            { RUNTIME_VERSION_1_11_221, 0x0 },
             { RUNTIME_VERSION_1_11_191, 0x0},
             {RUNTIME_VERSION_1_10_162, 0x05AA4278},
             {RUNTIME_VERSION_1_10_130, 0x05AA4248},
@@ -571,6 +589,7 @@ void RVA_InitAddresses()
         }, "48 8B 05 ? ? ? ? 80 78 25 00 0F 85 ? ? ? ? 49 8B", 0, 3, 7);
     GetRandomPercent = RVA<_GetRandomPercent>(
         "GetRandomPercent BSRandom::UnsignedInt(BSRandom *this))", {
+            { RUNTIME_VERSION_1_11_221, 0x0165AF90 },
             { RUNTIME_VERSION_1_11_191, 0x0165AE90 },
             { RUNTIME_VERSION_1_10_984, 0x01540CA0 },
             {RUNTIME_VERSION_1_10_162, 0x01B12C80},
@@ -589,6 +608,7 @@ void RVA_InitAddresses()
         }, "40 53 48 83 EC 30 8B D9 83 F9 01"); //ng
     GetRandomPercent2 = RVA<_GetRandomPercent2>(
         "GetRandomPercent2 (BSRandom::UnsignedInt(BSRandom *this, int a2))", {
+            { RUNTIME_VERSION_1_11_221, 0x0165B060 },
             { RUNTIME_VERSION_1_11_191, 0x0165AF60 },
             { RUNTIME_VERSION_1_10_984, 0x01540D70 },
             {RUNTIME_VERSION_1_10_162, 0x01B12D20},
@@ -607,6 +627,7 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 08 57 48 83 EC 30 8B DA 8B F9"); //ng
     SetPerkPoints_int = RVA<_SetPerkPoints_int>(
         "SetPerkPoints_int (PlayerCharacter::SetPerkCount)", {
+            { RUNTIME_VERSION_1_11_221, 0x00D75C60 },
             { RUNTIME_VERSION_1_11_191, 0x00D75AC0 },
             { RUNTIME_VERSION_1_10_984, 0x00CEFFB0 },
             {RUNTIME_VERSION_1_10_162, 0x00EB8BA0},
@@ -624,6 +645,7 @@ void RVA_InitAddresses()
         }, "40 57 48 83 EC 20 88 91 F1 0C 00 00"); //ng
     LevelupMenuProcessMessage = RVA<_LevelupMenuProcessMessage>(
         "LevelupMenuProcessMessage (LevelUpMenu::ProcessMessage)", {
+            { RUNTIME_VERSION_1_11_221, 0x00A76D10 },
             { RUNTIME_VERSION_1_11_191, 0x00A76CD0 },
             { RUNTIME_VERSION_1_10_984, 0x00A23100 },
             {RUNTIME_VERSION_1_10_162, 0x00B384E0},
@@ -641,6 +663,7 @@ void RVA_InitAddresses()
         }, "48 89 5C 24 ? 48 89 74 24 ? 57 48 83 EC 40 48 8B F1 48 8B FA"); //ng
     BSSoundHandle__Stop = RVA<_BSSoundHandle__Stop>(
         "_BSSoundHandle__Stop", {
+            { RUNTIME_VERSION_1_11_221, 0x0162DB00 },
             { RUNTIME_VERSION_1_11_191, 0x0162DA00 },
             { RUNTIME_VERSION_1_10_984, 0x015137E0 },
             {RUNTIME_VERSION_1_10_162, 0x01AC8110},
@@ -658,6 +681,7 @@ void RVA_InitAddresses()
         }, "40 53 48 83 EC 20 8B 19 83 FB FF 74 ? C6 41 05 02"); //ng
     GetSoundByName = RVA<_GetSoundByName>(
         "_GetSoundByName (BGSAudio::GetSoundDescriptor)", {
+            { RUNTIME_VERSION_1_11_221, 0x008287A0 },
             { RUNTIME_VERSION_1_11_191, 0x00828760 },
             { RUNTIME_VERSION_1_10_984, 0x007D5020 },
             {RUNTIME_VERSION_1_10_162, 0x0082F700},
@@ -669,6 +693,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 48 85 C0 74 ? C7 44 24 68 FF FF FF FF", 0, 1, 5); //ng
     BSAudioManager__GetSoundHandle = RVA<_BSAudioManager__GetSoundHandle>(
         "_BSAudioManager__GetSoundHandle", {
+            { RUNTIME_VERSION_1_11_221, 0x0162FFF0 },
             { RUNTIME_VERSION_1_11_191, 0x0162FEF0 },
             { RUNTIME_VERSION_1_10_984, 0x01515CD0 },
             {RUNTIME_VERSION_1_10_162, 0x01ACA5D0},
@@ -681,6 +706,7 @@ void RVA_InitAddresses()
         "E8 ? ? ? ? 83 FE 01 75 17", 0, 1, 5); //ng
     BSSoundHandle__Play = RVA<_BSSoundHandle__Play>(
         "_BSSoundHandle::Play", {
+            { RUNTIME_VERSION_1_11_221, 0x0162DA30 },
             { RUNTIME_VERSION_1_11_191, 0x0162D930 },
             { RUNTIME_VERSION_1_10_984, 0x01513710 },
             {RUNTIME_VERSION_1_10_162, 0x01AC8040},
@@ -692,6 +718,7 @@ void RVA_InitAddresses()
         }, "E8 ? ? ? ? 45 03 F7", 0, 1, 5); //ng
     g_BSAudioManager = RVA<void*>(
         "g_BSAudioManager", {
+            { RUNTIME_VERSION_1_11_221, 0x03345F90 },
             { RUNTIME_VERSION_1_11_191, 0x03345F10 },
             { RUNTIME_VERSION_1_10_984, 0x030A0C90 },
             {RUNTIME_VERSION_1_10_162, 0x05B0D208},
@@ -708,10 +735,12 @@ void RVA_InitFavoritesMenuExAddresses() // updated for ng
 {
     FavoritesMenuProcessMessage = RVA<_FavoritesMenuProcessMessage>(
         "FavoritesMenuMenuProcessMessage", {
+            { RUNTIME_VERSION_1_11_221, 0x98180000 },
             {RUNTIME_VERSION_1_10_163, 0x01271A20},
         }, "48 89 54 24 10 55 41 55 41 56 41 57 48 8D 6C"); // ng
     FavoritesManager__inputEventUser__ShouldHandleEvent = RVA<_FavoritesManager__inputEventUser__ShouldHandleEvent>(
     "FavoritesManager__inputEventUser__ShouldHandleEvent", {
+        { RUNTIME_VERSION_1_11_221, 0x01047210 },
         {RUNTIME_VERSION_1_10_163, 0x0126F6C0},
     }, "48 8B C4 48 89 58 20 57 41 55"); // ng
 }
@@ -723,6 +752,7 @@ void RVA_InitVATS()
 {
     g_VATS = RVA<void*>(
         "g_VATS", {
+            { RUNTIME_VERSION_1_11_221, 0x030EEF50 },
             {RUNTIME_VERSION_1_10_163, 0x058E2A30},
         }, "48 8B 05 ? ? ? ? 44 39 70 40", 0, 3, 7);
 }
